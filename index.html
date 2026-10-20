@@ -1,0 +1,701 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Rumbo</title>
+<meta name="description" content="Tu rutina, hábitos y tareas de la semana, con un asistente que te ayuda a decidir qué hacer primero.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Rumbo">
+<meta name="theme-color" content="#EDF0F4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1522" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: app de una columna tipo teléfono, foco arriba, navegación fija abajo. Brújula: tinta azul fría + ámbar de amanecer para "lo próximo". */
+:root{
+  --bg:#EDF0F4; --surface:#FFFFFF; --sunk:#E2E7EE; --fg:#162033; --muted:#5B6678; --line:#D3D9E2;
+  --accent:#2350C8; --accent-ink:#FFFFFF; --sun:#E07A14; --sun-soft:#FCE9D3;
+  --p1:#C8372D; --p2:#E07A14; --p3:#5B6678; --ok:#1F8A5B;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Atkinson Hyperlegible",ui-sans-serif,system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F1522; --surface:#182133; --sunk:#111A2A; --fg:#E6EBF3; --muted:#97A2B5; --line:#26324A;
+  --accent:#7E9DF5; --accent-ink:#0F1522; --sun:#F2A24A; --sun-soft:#3A2A17;
+  --p1:#F07A70; --p2:#F2A24A; --p3:#97A2B5; --ok:#5CC995; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1522; --surface:#182133; --sunk:#111A2A; --fg:#E6EBF3; --muted:#97A2B5; --line:#26324A;
+  --accent:#7E9DF5; --accent-ink:#0F1522; --sun:#F2A24A; --sun-soft:#3A2A17;
+  --p1:#F07A70; --p2:#F2A24A; --p3:#97A2B5; --ok:#5CC995; color-scheme:dark}
+html,body{background:var(--bg);color:var(--fg);margin:0;-webkit-text-size-adjust:100%}
+html{-webkit-tap-highlight-color:transparent}
+body{font-family:var(--body);font-size:16px;line-height:1.45}
+*{box-sizing:border-box}
+.wrap{max-width:560px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-top:calc(16px + env(safe-area-inset-top,0px));padding-bottom:calc(96px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:22px}
+header{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+h1{font-family:var(--display);font-weight:700;font-size:2rem;margin:0;letter-spacing:-.02em;text-wrap:balance}
+h2{font-family:var(--display);font-weight:700;font-size:1.15rem;margin:0}
+.eyebrow{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+.status{font-family:var(--mono);font-size:.7rem;color:var(--muted)}
+section{display:flex;flex-direction:column;gap:10px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.muted{color:var(--muted)}
+button,select,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+.btn{border:0;border-radius:10px;padding:10px 14px;background:var(--accent);color:var(--accent-ink);font-weight:700}
+.btn.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--line)}
+.btn.small{padding:6px 10px;font-size:.85rem}
+.btn:disabled{opacity:.55;cursor:default}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input[type=text],input[type=number],select,textarea{background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
+textarea{width:100%;min-height:140px;resize:vertical}
+.grow{flex:1 1 160px}
+
+/* Foco */
+.focus{background:var(--sun-soft);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:8px}
+.focus .label{font-family:var(--mono);font-size:.72rem;color:var(--sun);text-transform:uppercase;letter-spacing:.08em}
+.focus .title{font-family:var(--display);font-size:1.35rem;font-weight:700;text-wrap:balance}
+.tip{font-size:.92rem;color:var(--fg);background:var(--surface);border-radius:10px;padding:10px 12px;white-space:pre-wrap}
+
+/* Tareas */
+.list{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.task{border-bottom:1px solid var(--line);padding:10px 2px;display:flex;flex-direction:column;gap:8px}
+.task .main{display:flex;gap:10px;align-items:flex-start}
+.check{appearance:none;width:22px;height:22px;border:2px solid var(--muted);border-radius:6px;flex:none;margin-top:1px;display:grid;place-items:center;background:transparent}
+.check:checked{background:var(--ok);border-color:var(--ok)}
+.check:checked::after{content:"";width:6px;height:11px;border:solid var(--bg);border-width:0 2.5px 2.5px 0;transform:rotate(45deg) translate(-1px,-1px)}
+.task .txt{flex:1;min-width:0;overflow-wrap:anywhere}
+.task.done .txt .t{text-decoration:line-through;color:var(--muted)}
+.meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:3px;font-size:.78rem;color:var(--muted)}
+.chip{font-family:var(--mono);font-size:.7rem;padding:2px 7px;border-radius:99px;border:1px solid currentColor}
+.chip.p1{color:var(--p1)}.chip.p2{color:var(--p2)}.chip.p3{color:var(--p3)}
+.more{border:0;background:transparent;color:var(--muted);padding:2px 6px;font-size:1.1rem;line-height:1}
+.editor{display:flex;gap:8px;flex-wrap:wrap;padding-left:32px}
+.editor select,.editor input{padding:6px 8px;font-size:16px}
+#view{display:flex;flex-direction:column;gap:22px}
+.del{color:var(--p1);border-color:var(--line)}
+
+/* Rutina */
+.timeline{display:flex;flex-direction:column}
+.block{display:grid;grid-template-columns:58px 1fr auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px dashed var(--line)}
+.block time{font-family:var(--mono);font-size:.82rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.block.now time{color:var(--sun);font-weight:700}
+.block.now .lbl{font-weight:700}
+.block.past .lbl{color:var(--muted)}
+
+/* Hábitos */
+.habits{display:flex;flex-direction:column;gap:6px}
+.habit{display:flex;gap:10px;align-items:center;background:var(--surface);border-radius:12px;padding:10px 12px}
+.habit .n{flex:1;min-width:0}
+.dots{display:flex;gap:3px}
+.dots i{width:8px;height:8px;border-radius:2px;background:var(--sunk);display:block}
+.dots i.on{background:var(--ok)}
+.streak{font-family:var(--mono);font-size:.75rem;color:var(--muted);min-width:34px;text-align:right}
+
+/* Semana */
+.day{display:flex;flex-direction:column;gap:6px;padding-top:6px}
+.dayhead{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.dayhead b{font-family:var(--display);font-size:1.05rem}
+.load{font-family:var(--mono);font-size:.72rem;color:var(--muted)}
+.bar{height:4px;background:var(--sunk);border-radius:2px;overflow:hidden}
+.bar span{display:block;height:100%;background:var(--accent)}
+.bar span.heavy{background:var(--p1)}
+
+/* Asistente */
+.plan{display:flex;flex-direction:column;gap:12px}
+.plan .pday b{font-family:var(--display)}
+.plan ul{margin:4px 0 0;padding-left:18px}
+.plan li{margin:3px 0}
+.why{font-size:.8rem;color:var(--muted)}
+.empty{background:var(--surface);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:10px}
+
+ .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--surface);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat b{font-family:var(--display);font-size:1.6rem;font-variant-numeric:tabular-nums;line-height:1.1}
+.stat span{font-size:.75rem;color:var(--muted)}
+.chart{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;align-items:end;height:130px;padding-top:8px}
+.col{display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end}
+.col .stack{width:100%;max-width:30px;display:flex;flex-direction:column;justify-content:flex-end;flex:1;position:relative}
+.col .plan{background:var(--sunk);border-radius:5px 5px 0 0;width:100%;position:absolute;bottom:0}
+.col .done{background:var(--ok);border-radius:5px 5px 0 0;width:100%;position:absolute;bottom:0}
+.col small{font-family:var(--mono);font-size:.65rem;color:var(--muted)}
+.col small.today{color:var(--fg);font-weight:700}
+.legend{display:flex;gap:14px;font-size:.75rem;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.hbar{display:grid;grid-template-columns:1fr 46px;gap:4px 10px;align-items:center}
+.hbar .bar{height:8px;border-radius:4px}
+.hbar .bar span{background:var(--ok)}
+.hbar .pct{font-family:var(--mono);font-size:.75rem;text-align:right;color:var(--muted)}
+.summary{background:var(--surface);border-radius:14px;padding:14px 16px;white-space:pre-wrap;font-size:.95rem}
+.gear{border:0;background:transparent;color:var(--muted);padding:6px;border-radius:10px;display:grid;place-items:center}
+.gear svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8}
+.gear[aria-current="page"]{color:var(--accent)}
+.card{background:var(--surface);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.card p{margin:0}
+.ok{color:var(--ok)} .bad{color:var(--p1)}
+input[type=password]{background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0;font-family:var(--mono);font-size:.85rem}
+.danger{background:var(--p1);color:#fff}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px);z-index:5}
+nav .tabs{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
+nav button{border:0;background:transparent;padding:12px 2px 10px;font-size:.74rem;font-weight:700;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:4px}
+nav button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8}
+nav button[aria-current="page"]{color:var(--accent)}
+@media (prefers-reduced-motion:no-preference){.task,.habit{transition:background .2s}}
+</style>
+</head>
+<body>
+
+<div class="wrap" id="app">
+  <header>
+    <div>
+      <div class="eyebrow" id="today-label"></div>
+      <h1 id="view-title">Hoy</h1>
+    </div>
+    <div class="row" style="flex-wrap:nowrap">
+      <span class="status" id="status"></span>
+      <button class="gear" data-act="settings" aria-label="Ajustes"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+    </div>
+  </header>
+  <main id="view"></main>
+</div>
+
+<nav aria-label="Secciones">
+  <div class="tabs">
+    <button data-tab="hoy"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>Hoy</button>
+    <button data-tab="semana"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Semana</button>
+    <button data-tab="rutina"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.6"/><path d="M4 4v4h4M12 8v4l3 2"/></svg>Rutina</button>
+    <button data-tab="resumen"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Resumen</button>
+    <button data-tab="ia"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8z"/></svg>Asistente</button>
+  </div>
+</nav>
+
+<script>
+(() => {
+"use strict";
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid = () => Math.random().toString(36).slice(2, 10);
+const pad = n => String(n).padStart(2, "0");
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+const parse = s => { const [y,m,d] = s.split("-").map(Number); return new Date(y, m-1, d); };
+const DIAS = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+const MESES = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+const dayName = s => { const d = parse(s); const t = todayISO(); if (s === t) return "Hoy"; if (s === iso(addDays(parse(t),1))) return "Mañana"; return DIAS[d.getDay()][0].toUpperCase()+DIAS[d.getDay()].slice(1)+" "+d.getDate(); };
+const todayISO = () => iso(new Date());
+const nowMins = () => { const d = new Date(); return d.getHours()*60 + d.getMinutes(); };
+const toMins = t => { const [h,m] = String(t||"0:0").split(":").map(Number); return (h||0)*60 + (m||0); };
+const PRIO = {1:"Alta",2:"Media",3:"Baja"};
+const fmtMins = m => !m ? "" : m < 60 ? `${m} min` : `${Math.floor(m/60)} h${m%60 ? " "+m%60 : ""}`;
+
+let state = { tasks: [], habits: [], routine: [], focusTip: null, summaries: {} };
+let sumBusy = false, sumError = "";
+const MODEL_MAIN = "claude-sonnet-5-5", MODEL_FAST = "claude-haiku-5-5";
+const getKey = () => { try { return localStorage.getItem("rumbo-key") || ""; } catch { return ""; } };
+async function callClaude(prompt, opts = {}) {
+  const key = getKey();
+  if (!key) throw { code: "no_key" };
+  let res;
+  try {
+    res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+      body: JSON.stringify({ model: opts.modelTier === "quick" ? MODEL_FAST : MODEL_MAIN, max_tokens: opts.maxTokens || 2500, messages: [{ role: "user", content: prompt }] }),
+    });
+  } catch { throw { code: "network" }; }
+  let body = null; try { body = await res.json(); } catch {}
+  if (!res.ok) {
+    const msg = String(body?.error?.message || "");
+    if (res.status === 401 || res.status === 403) throw { code: "bad_key" };
+    if (res.status === 429) throw { code: "rate_limited" };
+    if (res.status === 529 || res.status >= 500) throw { code: "overloaded" };
+    if (/credit|billing|balance/i.test(msg)) throw { code: "no_credit" };
+    throw { code: "upstream_error", message: msg };
+  }
+  const text = (body?.content || []).filter(b => b.type === "text").map(b => b.text).join("").trim();
+  if (!text) throw { code: "empty_completion" };
+  return { text, truncated: body?.stop_reason === "max_tokens" };
+}
+const sample = (prompt, opts) => callClaude(prompt, opts);
+sample.json = async (prompt, opts) => {
+  const { text } = await callClaude(prompt + "\n\nDevuelve únicamente el JSON, sin texto antes ni después.", opts);
+  const t = text.replace(/^```(?:json)?\s*|\s*```$/g, "");
+  try { return JSON.parse(t); } catch {}
+  const a = Math.min(...["{", "["].map(c => t.indexOf(c)).filter(i => i >= 0)), b = Math.max(t.lastIndexOf("}"), t.lastIndexOf("]"));
+  try { return JSON.parse(t.slice(a, b + 1)); } catch { throw { code: "invalid_json" }; }
+};
+let keyTest = "", confirmWipe = false, importMsg = "";
+let ref = null, loaded = false, saveTimer = null, saving = Promise.resolve(), editing = null, tab = "hoy";
+let aiPlan = null, aiBusy = false, aiError = "", orderBusy = false;
+
+const normalize = d => ({
+  tasks: Array.isArray(d?.tasks) ? d.tasks : [],
+  habits: Array.isArray(d?.habits) ? d.habits : [],
+  routine: Array.isArray(d?.routine) ? d.routine : [],
+  focusTip: d?.focusTip ?? null,
+  summaries: d?.summaries && typeof d.summaries === "object" ? d.summaries : {},
+});
+const lsGet = () => { try { const v = localStorage.getItem("rumbo"); return v ? normalize(JSON.parse(v)) : null; } catch { return null; } };
+const setStatus = t => { $("#status").textContent = t; };
+
+function save() {
+  try { localStorage.setItem("rumbo", JSON.stringify(state)); setStatus(""); }
+  catch { setStatus("no se pudo guardar"); }
+}
+const commit = () => { save(); render(); };
+
+/* ---------- Prioridad ---------- */
+function score(t) {
+  const today = todayISO();
+  let s = (4 - (t.prio||2)) * 10;
+  if (t.day && t.day < today) s += 15;
+  if (t.mins && t.mins <= 15) s += 3;
+  return s;
+}
+function todayTasks() {
+  const today = todayISO();
+  return state.tasks.filter(t => t.day === today || (t.day && t.day < today && !t.done));
+}
+function ordered(list) {
+  return [...list].sort((a,b) => (a.done - b.done) || ((a.order ?? 999) - (b.order ?? 999)) || (score(b) - score(a)));
+}
+
+/* ---------- Render ---------- */
+function render() {
+  const d = new Date();
+  $("#today-label").textContent = `${DIAS[d.getDay()]} ${d.getDate()} ${MESES[d.getMonth()]}`;
+  document.querySelectorAll("nav button").forEach(b => b.setAttribute("aria-current", b.dataset.tab === tab ? "page" : "false"));
+  const titles = { hoy: "Hoy", semana: "Tu semana", rutina: "Rutina y hábitos", resumen: "Resumen semanal", ia: "Asistente", ajustes: "Ajustes" };
+  document.querySelector(".gear").setAttribute("aria-current", tab === "ajustes" ? "page" : "false");
+  $("#view-title").textContent = titles[tab];
+  const v = $("#view");
+  if (!loaded) { v.innerHTML = `<p class="muted">Cargando tus datos…</p>`; return; }
+  v.innerHTML = tab === "hoy" ? viewHoy() : tab === "semana" ? viewSemana() : tab === "rutina" ? viewRutina() : tab === "resumen" ? viewResumen() : tab === "ajustes" ? viewAjustes() : viewIA();
+}
+
+function taskRow(t, opts = {}) {
+  const today = todayISO();
+  const late = t.day && t.day < today && !t.done;
+  const days = [["", "Sin fecha"], ...Array.from({length: 14}, (_, i) => { const s = iso(addDays(new Date(), i)); return [s, dayName(s)]; })];
+  if (t.day && !days.some(x => x[0] === t.day)) days.unshift([t.day, dayName(t.day)]);
+  return `<div class="task ${t.done ? "done" : ""}" data-id="${t.id}">
+    <div class="main">
+      <input type="checkbox" class="check" data-act="toggle" ${t.done ? "checked" : ""} aria-label="Completar">
+      <div class="txt"><div class="t">${esc(t.title)}</div>
+        <div class="meta"><span class="chip p${t.prio||2}">${PRIO[t.prio||2]}</span>${t.mins ? `<span>${fmtMins(t.mins)}</span>` : ""}${late ? `<span style="color:var(--p1)">atrasada · ${dayName(t.day)}</span>` : ""}${opts.showDay && t.day ? `<span>${dayName(t.day)}</span>` : ""}</div></div>
+      <button class="more" data-act="edit" aria-label="Editar">⋯</button>
+    </div>
+    ${editing === t.id ? `<div class="editor">
+      <select id="ed-day-${t.id}" data-act="day">${days.map(([v,l]) => `<option value="${v}" ${v === (t.day||"") ? "selected" : ""}>${l}</option>`).join("")}</select>
+      <select id="ed-prio-${t.id}" data-act="prio">${[1,2,3].map(p => `<option value="${p}" ${p === (t.prio||2) ? "selected" : ""}>${PRIO[p]}</option>`).join("")}</select>
+      <input id="ed-mins-${t.id}" type="number" min="0" step="5" value="${t.mins||""}" placeholder="min" data-act="mins" style="width:80px" aria-label="Minutos">
+      <button class="btn ghost small del" data-act="delete">Borrar</button>
+    </div>` : ""}
+  </div>`;
+}
+
+function quickAdd(defaultDay) {
+  return `<form class="row" data-form="add" data-day="${defaultDay}">
+    <input type="text" id="add-${defaultDay||"x"}" name="title" class="grow" placeholder="Nueva tarea…" autocomplete="off">
+    <select name="prio" id="addp-${defaultDay||"x"}" aria-label="Prioridad"><option value="1">Alta</option><option value="2" selected>Media</option><option value="3">Baja</option></select>
+    <button class="btn" type="submit">Añadir</button>
+  </form>`;
+}
+
+function viewHoy() {
+  const list = ordered(todayTasks());
+  const pending = list.filter(t => !t.done);
+  const doneN = list.length - pending.length;
+  const top = pending[0];
+  const now = nowMins();
+  const blocks = [...state.routine].sort((a,b) => toMins(a.time) - toMins(b.time));
+  let nowIdx = -1; blocks.forEach((b,i) => { if (toMins(b.time) <= now) nowIdx = i; });
+  const isEmpty = !state.tasks.length && !state.routine.length && !state.habits.length;
+  return `
+  ${isEmpty ? `<div class="empty"><h2>Empieza tu día</h2><p class="muted" style="margin:0">Añade tus tareas aquí abajo, arma tu rutina en la pestaña Rutina o cuéntale al Asistente todo lo que tienes que hacer esta semana y él lo reparte.</p><div class="row"><button class="btn ghost small" data-act="seed">Cargar un ejemplo para ver cómo funciona</button></div></div>` : ""}
+  <div class="focus">
+    <span class="label">${top ? "Haz esto primero" : list.length ? "Día completo" : "Tu foco"}</span>
+    <div class="title">${top ? esc(top.title) : list.length ? "Terminaste todo lo de hoy 🎉" : "Todavía no hay tareas para hoy"}</div>
+    ${top ? `<div class="meta"><span class="chip p${top.prio||2}">${PRIO[top.prio||2]}</span>${top.mins ? `<span>${fmtMins(top.mins)}</span>` : ""}</div>` : ""}
+    ${state.focusTip && state.focusTip.day === todayISO() ? `<div class="tip">${esc(state.focusTip.text)}</div>` : ""}
+    ${pending.length > 1 ? `<div class="row"><button class="btn small" data-act="order" ${orderBusy ? "disabled" : ""}>${orderBusy ? "Pensando…" : "Ordenar mi día con IA"}</button><span class="muted" style="font-size:.85rem">${doneN}/${list.length} hechas</span></div>` : ""}
+  </div>
+  <section>
+    <div class="dayhead"><h2>Tareas</h2><span class="load">${fmtMins(pending.reduce((a,t)=>a+(+t.mins||0),0)) || ""}</span></div>
+    ${quickAdd(todayISO())}
+    <div class="list">${list.map(t => taskRow(t)).join("") || `<p class="muted">Nada por aquí. Añade una tarea o pídele al Asistente que planifique.</p>`}</div>
+  </section>
+  ${state.habits.length ? `<section><h2>Hábitos de hoy</h2><div class="habits">${state.habits.map(habitRow).join("")}</div></section>` : ""}
+  ${blocks.length ? `<section><h2>Rutina</h2><div class="timeline">${blocks.map((b,i) => `<div class="block ${i === nowIdx ? "now" : i < nowIdx ? "past" : ""}"><time>${esc(b.time)}</time><span class="lbl">${esc(b.label)}</span><span class="muted" style="font-size:.75rem">${i === nowIdx ? "ahora" : ""}</span></div>`).join("")}</div></section>` : ""}`;
+}
+
+function streak(h) {
+  let n = 0, d = new Date();
+  if (!h.log?.[iso(d)]) d = addDays(d, -1);
+  while (h.log?.[iso(d)]) { n++; d = addDays(d, -1); }
+  return n;
+}
+function habitRow(h) {
+  const today = todayISO();
+  const last7 = Array.from({length:7}, (_,i) => iso(addDays(new Date(), i-6)));
+  return `<div class="habit" data-hid="${h.id}">
+    <input type="checkbox" class="check" data-act="habit" ${h.log?.[today] ? "checked" : ""} aria-label="Hecho hoy">
+    <span class="n">${esc(h.name)}</span>
+    <span class="dots" aria-hidden="true">${last7.map(d => `<i class="${h.log?.[d] ? "on" : ""}"></i>`).join("")}</span>
+    <span class="streak">${streak(h)}🔥</span>
+  </div>`;
+}
+
+function viewSemana() {
+  const days = Array.from({length:7}, (_,i) => iso(addDays(new Date(), i)));
+  const routineMins = 0;
+  const loads = days.map(d => state.tasks.filter(t => t.day === d && !t.done).reduce((a,t)=>a+(+t.mins||30),0));
+  const max = Math.max(240, ...loads);
+  const noDate = state.tasks.filter(t => !t.day && !t.done);
+  return `<p class="muted" style="margin:0">Los próximos 7 días. Toca ⋯ en una tarea para moverla a otro día.</p>
+  ${days.map((d,i) => {
+    const ts = ordered(state.tasks.filter(t => t.day === d));
+    return `<section class="day">
+      <div class="dayhead"><b>${dayName(d)}</b><span class="load">${ts.filter(t=>!t.done).length} pendientes · ~${fmtMins(loads[i]) || "0 min"}</span></div>
+      <div class="bar"><span class="${loads[i] > 300 ? "heavy" : ""}" style="width:${Math.min(100, loads[i]/max*100)}%"></span></div>
+      <div class="list">${ts.map(t => taskRow(t)).join("")}</div>
+      ${quickAdd(d)}
+    </section>`; }).join("")}
+  ${noDate.length ? `<section><h2>Sin fecha</h2><div class="list">${noDate.map(t => taskRow(t)).join("")}</div></section>` : ""}`;
+}
+
+function viewRutina() {
+  const blocks = [...state.routine].sort((a,b) => toMins(a.time) - toMins(b.time));
+  return `<section>
+    <h2>Hábitos</h2>
+    <p class="muted" style="margin:0">Márcalos cada día; los cuadritos muestran tu última semana.</p>
+    <div class="habits">${state.habits.map(h => habitRow(h).replace('</div>', '')+`<button class="more" data-act="delhabit" aria-label="Borrar hábito">×</button></div>`).join("") || ""}</div>
+    <form class="row" data-form="habit"><input type="text" id="habit-new" name="name" class="grow" placeholder="Ej.: Leer 20 min, Gym, Tomar agua" autocomplete="off"><button class="btn" type="submit">Añadir</button></form>
+  </section>
+  <section>
+    <h2>Rutina diaria</h2>
+    <p class="muted" style="margin:0">Tus bloques fijos. El Asistente los tiene en cuenta al planificar.</p>
+    <div class="timeline">${blocks.map(b => `<div class="block" data-rid="${b.id}"><time>${esc(b.time)}</time><span class="lbl">${esc(b.label)}</span><button class="more" data-act="delblock" aria-label="Borrar bloque">×</button></div>`).join("")}</div>
+    <form class="row" data-form="block"><input type="time" id="block-time" name="time" required style="background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:9px"><input type="text" id="block-label" name="label" class="grow" placeholder="Ej.: Clases, Entrenar, Cena" required autocomplete="off"><button class="btn" type="submit">Añadir</button></form>
+  </section>`;
+}
+
+function viewIA() {
+  const draft = (() => { try { return localStorage.getItem("rumbo-draft") || ""; } catch { return ""; } })();
+  return `<section>
+    <p style="margin:0">Cuéntame todo lo que tienes que hacer: entregas, exámenes, gym, trámites, lo que sea. Dime fechas límite si las hay y te lo reparto en los próximos 7 días según tu rutina y lo que ya tienes.</p>
+    <textarea id="ia-input" placeholder="Ej.: El jueves entrego el ensayo de ENC1102, todavía me falta investigar y escribir. Tengo que preparar el discurso de oratoria para el lunes. Quiero entrenar 4 veces esta semana. Lavar ropa y hacer las compras.">${esc(draft)}</textarea>
+    <div class="row"><button class="btn" data-act="plan" ${aiBusy ? "disabled" : ""}>${aiBusy ? "Planificando…" : "Distribuir en mi semana"}</button>${aiPlan ? `<button class="btn ghost" data-act="discard">Descartar</button>` : ""}</div>
+    ${aiError ? `<p style="color:var(--p1);margin:0">${esc(aiError)}</p>` : ""}
+  </section>
+  ${aiPlan ? `<section class="plan">
+    <h2>Propuesta</h2>
+    ${aiPlan.nota ? `<div class="tip">${esc(aiPlan.nota)}</div>` : ""}
+    ${Object.entries(groupBy(aiPlan.tareas, t => t.day || "")).sort(([a],[b]) => (a||"z").localeCompare(b||"z")).map(([d, ts]) => `<div class="pday"><b>${d ? dayName(d) : "Sin fecha"}</b><ul>${ts.map(t => `<li>${esc(t.title)} <span class="chip p${t.prio}">${PRIO[t.prio]}</span> ${t.mins ? `<span class="muted" style="font-size:.8rem">${fmtMins(t.mins)}</span>` : ""}${t.why ? `<div class="why">${esc(t.why)}</div>` : ""}</li>`).join("")}</ul></div>`).join("")}
+    <button class="btn" data-act="apply">Agregar ${aiPlan.tareas.length} tareas a mi semana</button>
+  </section>` : ""}`;
+}
+function weekStats() {
+  const days = Array.from({length:7}, (_,i) => iso(addDays(new Date(), i-6)));
+  const inR = d => d && d >= days[0] && d <= days[6];
+  const planned = state.tasks.filter(t => inR(t.day));
+  const doneT = state.tasks.filter(t => t.done && inR(t.doneAt || t.day));
+  const per = days.map(d => ({ d, plan: state.tasks.filter(t => t.day === d).length, done: state.tasks.filter(t => t.done && (t.doneAt || t.day) === d).length }));
+  const pct = planned.length ? Math.round(planned.filter(t => t.done).length / planned.length * 100) : 0;
+  const mins = doneT.reduce((a,t) => a + (+t.mins||0), 0);
+  const late = state.tasks.filter(t => !t.done && t.day && t.day < todayISO());
+  const habits = state.habits.map(h => ({ name: h.name, n: days.filter(d => h.log?.[d]).length, streak: streak(h) }));
+  const best = [...per].sort((a,b) => b.done - a.done)[0];
+  const byPrio = [1,2,3].map(p => ({ p, plan: planned.filter(t => (t.prio||2) === p).length, done: planned.filter(t => (t.prio||2) === p && t.done).length }));
+  return { days, planned, doneT, per, pct, mins, late, habits, best, byPrio };
+}
+function viewResumen() {
+  const s = weekStats();
+  const key = s.days[6];
+  const saved = state.summaries[key];
+  const maxV = Math.max(1, ...s.per.map(x => Math.max(x.plan, x.done)));
+  const hasData = s.planned.length || s.doneT.length || s.habits.some(h => h.n);
+  return `<p class="muted" style="margin:0">Últimos 7 días: ${dayName(s.days[0]).toLowerCase()} ${parse(s.days[0]).getDate()} ${MESES[parse(s.days[0]).getMonth()]} → hoy.</p>
+  <div class="stats">
+    <div class="stat"><b>${s.doneT.length}</b><span>tareas hechas</span></div>
+    <div class="stat"><b>${s.pct}%</b><span>de lo planeado</span></div>
+    <div class="stat"><b>${s.mins ? (s.mins/60).toFixed(1).replace(".0","") + " h" : "–"}</b><span>de trabajo</span></div>
+  </div>
+  <section>
+    <div class="dayhead"><h2>Día por día</h2><div class="legend"><span><i style="background:var(--sunk)"></i>Planeadas</span><span><i style="background:var(--ok)"></i>Hechas</span></div></div>
+    <div class="chart">${s.per.map(x => `<div class="col" title="${x.done} de ${x.plan}"><small>${x.done}/${x.plan}</small><div class="stack"><div class="plan" style="height:${x.plan/maxV*100}%"></div><div class="done" style="height:${x.done/maxV*100}%"></div></div><small class="${x.d === todayISO() ? "today" : ""}">${DIAS[parse(x.d).getDay()].slice(0,2)}</small></div>`).join("")}</div>
+    ${s.best?.done ? `<p class="muted" style="margin:0;font-size:.9rem">Tu día más productivo fue el ${DIAS[parse(s.best.d).getDay()]} con ${s.best.done} tareas.${s.late.length ? ` Tienes ${s.late.length} tarea${s.late.length>1?"s":""} atrasada${s.late.length>1?"s":""}.` : ""}</p>` : ""}
+  </section>
+  ${s.habits.length ? `<section><h2>Hábitos</h2><div class="hbar">${s.habits.map(h => `<div><div style="font-size:.9rem;margin-bottom:3px">${esc(h.name)} <span class="muted" style="font-size:.75rem">· racha ${h.streak}</span></div><div class="bar"><span style="width:${h.n/7*100}%"></span></div></div><span class="pct">${h.n}/7</span>`).join("")}</div></section>` : ""}
+  <section>
+    <h2>Tu resumen</h2>
+    ${saved ? `<div class="summary">${esc(saved.text)}</div>` : `<p class="muted" style="margin:0">${hasData ? "La IA puede leer estos números y escribirte qué salió bien, qué mejorar y cómo plantear la próxima semana." : "Cuando completes tareas y marques hábitos, aquí vas a ver cómo te fue."}</p>`}
+    ${hasData ? `<div class="row"><button class="btn${saved ? " ghost" : ""}" data-act="summary" ${sumBusy ? "disabled" : ""}>${sumBusy ? "Escribiendo…" : saved ? "Actualizar resumen" : "Escribir mi resumen con IA"}</button></div>` : ""}
+    ${sumError ? `<p style="color:var(--p1);margin:0">${esc(sumError)}</p>` : ""}
+  </section>`;
+}
+async function runSummary() {
+  if (!getKey()) { sumError = errCopy("no_key"); render(); return; }
+  sumBusy = true; sumError = ""; render();
+  const s = weekStats();
+  const upcoming = Array.from({length:7}, (_,i) => iso(addDays(new Date(), i+1))).map(d => `${DIAS[parse(d).getDay()]}: ${state.tasks.filter(t => t.day === d && !t.done).length} tareas`).join(", ");
+  const prompt = `Escribe el resumen semanal de un estudiante a partir de sus datos reales. Tono cercano y directo, en español, tuteando. Sin inventar datos.
+Período: ${s.days[0]} a ${s.days[6]}.
+Por día (hechas/planeadas): ${s.per.map(x => `${DIAS[parse(x.d).getDay()]} ${x.done}/${x.plan}`).join(", ")}
+Cumplimiento de lo planeado: ${s.pct}%. Tiempo en tareas hechas: ${s.mins} min.
+Por prioridad (hechas/planeadas): alta ${s.byPrio[0].done}/${s.byPrio[0].plan}, media ${s.byPrio[1].done}/${s.byPrio[1].plan}, baja ${s.byPrio[2].done}/${s.byPrio[2].plan}.
+Tareas hechas: ${s.doneT.map(t => t.title).slice(0,40).join("; ") || "ninguna"}
+Atrasadas sin hacer: ${s.late.map(t => t.title).slice(0,20).join("; ") || "ninguna"}
+Hábitos (días cumplidos de 7, racha actual): ${s.habits.map(h => `${h.name} ${h.n}/7 racha ${h.streak}`).join("; ") || "sin hábitos"}
+Rutina: ${context().routine}
+Próxima semana ya planificada: ${upcoming}
+Formato: texto plano, sin markdown ni asteriscos. Tres partes con estos títulos exactos en su propia línea: "Lo que salió bien", "Qué mejorar", "Para la próxima semana". Cada parte con 2-3 líneas cortas que empiecen con "• ". Máximo 140 palabras.`;
+  try {
+    const { text } = await sample(prompt, { maxTokens: 800 });
+    state.summaries[s.days[6]] = { text: text.trim(), at: new Date().toISOString() };
+    const keys = Object.keys(state.summaries).sort(); while (keys.length > 8) delete state.summaries[keys.shift()];
+  } catch (e) { if (e?.code !== "cancelled") sumError = errCopy(e?.code); }
+  sumBusy = false; commit();
+}
+function viewAjustes() {
+  const key = getKey();
+  const n = state.tasks.length, h = state.habits.length, b = state.routine.length;
+  return `<section class="card">
+    <h2>Inteligencia artificial</h2>
+    <p class="muted">El Asistente, el orden del día y el resumen usan Claude con tu propia clave de la API de Anthropic. La clave se guarda solo en este teléfono.</p>
+    <p class="${key ? "ok" : "muted"}" style="font-size:.9rem">${key ? "Clave guardada: " + esc(key.slice(0, 10)) + "…" + esc(key.slice(-4)) : "Todavía no hay clave."}</p>
+    <form class="row" data-form="key"><input type="password" id="api-key" name="key" class="grow" placeholder="sk-ant-…" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="btn" type="submit">Guardar</button></form>
+    <div class="row">${key ? `<button class="btn ghost small" data-act="testkey">Probar clave</button><button class="btn ghost small del" data-act="delkey">Quitar clave</button>` : ""}</div>
+    ${keyTest ? `<p style="font-size:.9rem">${esc(keyTest)}</p>` : ""}
+    <p class="muted" style="font-size:.85rem">Consigue tu clave en <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> → API Keys. Se paga por uso; con un uso normal son unos pocos centavos al mes.</p>
+  </section>
+  <section class="card">
+    <h2>Copia de seguridad</h2>
+    <p class="muted">Tus datos viven en este teléfono (${n} tareas, ${h} hábitos, ${b} bloques de rutina). Exporta una copia de vez en cuando o antes de cambiar de celular.</p>
+    <div class="row"><button class="btn" data-act="export">Exportar copia</button><label class="btn ghost" for="import-file" style="cursor:pointer">Importar copia</label><input type="file" id="import-file" accept="application/json,.json" hidden></div>
+    ${importMsg ? `<p style="font-size:.9rem">${esc(importMsg)}</p>` : ""}
+  </section>
+  <section class="card">
+    <h2>Borrar todo</h2>
+    <p class="muted">Elimina tareas, hábitos, rutina y resúmenes de este teléfono. No se puede deshacer.</p>
+    <div class="row">${confirmWipe ? `<button class="btn danger" data-act="wipe-yes">Sí, borrar todo</button><button class="btn ghost" data-act="wipe-no">Cancelar</button>` : `<button class="btn ghost del" data-act="wipe">Borrar mis datos</button>`}</div>
+  </section>`;
+}
+async function exportBackup() {
+  const name = `rumbo-copia-${todayISO()}.json`;
+  const blob = new Blob([JSON.stringify({ app: "rumbo", version: 1, savedAt: new Date().toISOString(), data: state }, null, 2)], { type: "application/json" });
+  try {
+    const file = new File([blob], name, { type: "application/json" });
+    if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title: "Copia de Rumbo" }); importMsg = "Copia lista. Guárdala en Archivos o en iCloud."; render(); return; }
+  } catch (e) { if (e?.name === "AbortError") return; }
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  importMsg = "Copia descargada."; render();
+}
+async function importBackup(file) {
+  try {
+    const raw = JSON.parse(await file.text());
+    const data = normalize(raw?.data ?? raw);
+    if (!data.tasks.length && !data.habits.length && !data.routine.length) throw 0;
+    state = data; save();
+    importMsg = `Copia importada: ${data.tasks.length} tareas, ${data.habits.length} hábitos, ${data.routine.length} bloques.`;
+  } catch { importMsg = "Ese archivo no es una copia de Rumbo."; }
+  render();
+}
+async function testKey() {
+  keyTest = "Probando…"; render();
+  try { await callClaude("Responde solo: ok", { modelTier: "quick", maxTokens: 10 }); keyTest = "✓ La clave funciona."; }
+  catch (e) { keyTest = errCopy(e?.code); }
+  render();
+}
+const groupBy = (a, f) => a.reduce((o, x) => ((o[f(x)] ||= []).push(x), o), {});
+
+/* ---------- IA ---------- */
+const errCopy = c => ({
+  no_key: "Para usar la IA, agrega tu clave de API en Ajustes (el engranaje arriba a la derecha).",
+  bad_key: "La clave de API no es válida. Revísala en Ajustes.",
+  no_credit: "Tu cuenta de la API no tiene saldo. Carga crédito en console.anthropic.com.",
+  rate_limited: "Muchas solicitudes seguidas. Espera un momento y vuelve a intentar.",
+  overloaded: "Claude está saturado en este momento. Intenta en unos minutos.",
+  network: "Sin conexión a internet. La IA necesita conexión; el resto de la app funciona igual.",
+  invalid_json: "La respuesta llegó incompleta. Vuelve a intentar.",
+}[c] || "Algo falló al conectar con Claude. Vuelve a intentar.");
+
+function context() {
+  const days = Array.from({length:7}, (_,i) => iso(addDays(new Date(), i)));
+  const week = days.map(d => {
+    const ts = state.tasks.filter(t => t.day === d && !t.done);
+    return `${d} (${DIAS[parse(d).getDay()]}): ${ts.length ? ts.map(t => `${t.title} [${fmtMins(t.mins)||"?"}]`).join("; ") : "libre"}`;
+  }).join("\n");
+  const routine = [...state.routine].sort((a,b)=>toMins(a.time)-toMins(b.time)).map(b => `${b.time} ${b.label}`).join(", ") || "sin rutina cargada";
+  return { days, week, routine };
+}
+
+async function runPlan() {
+  const text = $("#ia-input").value.trim();
+  if (!text) { aiError = "Escribe primero lo que tienes que hacer."; render(); return; }
+  if (!getKey()) { aiError = errCopy("no_key"); render(); return; }
+  aiBusy = true; aiError = ""; render();
+  const { days, week, routine } = context();
+  const now = new Date();
+  const prompt = `Eres un planificador personal para un estudiante. Hoy es ${days[0]} (${DIAS[now.getDay()]}), son las ${pad(now.getHours())}:${pad(now.getMinutes())}.
+Reparte lo que el usuario cuenta en tareas concretas dentro de estos 7 días: ${days.join(", ")}.
+Reglas: divide trabajos grandes en pasos (ej. investigar, borrador, revisar) y termina cada paso antes de su fecha límite; equilibra la carga entre días según lo ya planificado; no pongas más de ~5 h de tareas por día; deja hábitos/entrenos repartidos; si algo es para hoy y ya es tarde, muévelo a mañana salvo que sea urgente. Prioridad 1 = alta (urgente e importante), 2 = media, 3 = baja.
+
+Rutina fija diaria: ${routine}
+Ya planificado:
+${week}
+
+Lo que cuenta el usuario:
+"""${text.slice(0, 6000)}"""
+
+Responde SOLO con JSON con esta forma:
+{"tareas":[{"title":"texto corto en español","day":"YYYY-MM-DD","prio":1,"mins":45,"why":"motivo breve"}],"nota":"1-2 frases con el criterio usado"}`;
+  try {
+    const r = await sample.json(prompt, { cache: false });
+    const tareas = (Array.isArray(r?.tareas) ? r.tareas : []).filter(t => t && t.title).map(t => ({
+      title: String(t.title).slice(0, 140),
+      day: days.includes(String(t.day)) ? String(t.day) : "",
+      prio: [1,2,3].includes(+t.prio) ? +t.prio : 2,
+      mins: Math.max(0, Math.min(600, Math.round(+t.mins || 0))),
+      why: t.why ? String(t.why).slice(0, 200) : "",
+    }));
+    if (!tareas.length) aiError = "No encontré tareas en el texto. Intenta ser un poco más concreto.";
+    else aiPlan = { tareas, nota: r?.nota ? String(r.nota).slice(0, 400) : "" };
+  } catch (e) {
+    if (e?.code !== "cancelled") aiError = errCopy(e?.code);
+  }
+  aiBusy = false; render();
+}
+
+async function runOrder() {
+  const pending = ordered(todayTasks()).filter(t => !t.done);
+  if (!getKey()) { // orden local por prioridad
+    pending.sort((a,b) => score(b) - score(a)).forEach((t,i) => t.order = i);
+    state.focusTip = { day: todayISO(), text: "Ordené por prioridad y atrasos. Agrega tu clave de API en Ajustes para que la IA te dé un plan más fino." };
+    commit(); return;
+  }
+  orderBusy = true; render();
+  const now = new Date();
+  const routine = context().routine;
+  const prompt = `Ayuda a un estudiante a decidir el orden de sus tareas de hoy. Son las ${pad(now.getHours())}:${pad(now.getMinutes())}.
+Rutina fija: ${routine}
+Tareas pendientes (id | tarea | prioridad 1 alta-3 baja | minutos | atrasada):
+${pending.map(t => `${t.id} | ${t.title} | ${t.prio||2} | ${t.mins||"?"} | ${t.day < todayISO() ? "sí" : "no"}`).join("\n")}
+Criterio: lo urgente e importante primero, tareas difíciles cuando hay más energía, aprovecha huecos cortos para tareas rápidas, respeta la rutina.
+Responde SOLO con JSON: {"orden":["id1","id2"],"consejo":"2-3 frases concretas: por dónde empezar y en qué hueco de la rutina hacer cada bloque"}`;
+  try {
+    const r = await sample.json(prompt, { modelTier: "quick", cache: false });
+    const ids = Array.isArray(r?.orden) ? r.orden.map(String) : [];
+    pending.forEach(t => { const i = ids.indexOf(t.id); t.order = i < 0 ? 900 + score(t) * -1 : i; });
+    state.focusTip = { day: todayISO(), text: r?.consejo ? String(r.consejo).slice(0, 500) : "" };
+    if (!state.focusTip.text) state.focusTip = null;
+  } catch (e) {
+    if (e?.code !== "cancelled") state.focusTip = { day: todayISO(), text: errCopy(e?.code) };
+  }
+  orderBusy = false; commit();
+}
+
+/* ---------- Eventos ---------- */
+const findTask = el => state.tasks.find(t => t.id === el.closest("[data-id]")?.dataset.id);
+const findHabit = el => state.habits.find(h => h.id === el.closest("[data-hid]")?.dataset.hid);
+
+document.addEventListener("click", e => {
+  const navb = e.target.closest("nav button");
+  if (navb) { tab = navb.dataset.tab; editing = null; render(); window.scrollTo(0,0); return; }
+  const a = e.target.closest("[data-act]"); if (!a) return;
+  const act = a.dataset.act;
+  if (act === "toggle") { const t = findTask(a); t.done = !t.done; t.doneAt = t.done ? todayISO() : null; commit(); }
+  else if (act === "edit") { const t = findTask(a); editing = editing === t.id ? null : t.id; render(); }
+  else if (act === "delete") { const t = findTask(a); state.tasks = state.tasks.filter(x => x !== t); editing = null; commit(); }
+  else if (act === "habit") { const h = findHabit(a); h.log ||= {}; const d = todayISO(); if (h.log[d]) delete h.log[d]; else h.log[d] = true; commit(); }
+  else if (act === "delhabit") { const h = findHabit(a); state.habits = state.habits.filter(x => x !== h); commit(); }
+  else if (act === "delblock") { const id = a.closest("[data-rid]").dataset.rid; state.routine = state.routine.filter(b => b.id !== id); commit(); }
+  else if (act === "settings") { tab = tab === "ajustes" ? "hoy" : "ajustes"; keyTest = ""; importMsg = ""; confirmWipe = false; render(); window.scrollTo(0,0); }
+  else if (act === "testkey") testKey();
+  else if (act === "delkey") { try { localStorage.removeItem("rumbo-key"); } catch {} keyTest = ""; render(); }
+  else if (act === "export") exportBackup();
+  else if (act === "wipe") { confirmWipe = true; render(); }
+  else if (act === "wipe-no") { confirmWipe = false; render(); }
+  else if (act === "wipe-yes") { state = normalize({}); confirmWipe = false; save(); tab = "hoy"; render(); }
+  else if (act === "order") runOrder();
+  else if (act === "summary") runSummary();
+  else if (act === "plan") runPlan();
+  else if (act === "discard") { aiPlan = null; render(); }
+  else if (act === "apply") {
+    aiPlan.tareas.forEach(t => state.tasks.push({ id: uid(), title: t.title, day: t.day || null, prio: t.prio, mins: t.mins, done: false }));
+    aiPlan = null; try { localStorage.removeItem("rumbo-draft"); } catch {}
+    tab = "semana"; commit(); window.scrollTo(0,0);
+  }
+  else if (act === "seed") {
+    const d0 = todayISO(), d1 = iso(addDays(new Date(),1)), d2 = iso(addDays(new Date(),2));
+    state.routine = [["07:00","Despertar y desayunar"],["08:00","Clases"],["13:00","Almuerzo"],["17:30","Entrenar"],["20:00","Cena"],["23:00","Dormir"]].map(([time,label]) => ({ id: uid(), time, label }));
+    state.habits = ["Leer 20 min (ejemplo)","Tomar 2 L de agua (ejemplo)"].map(name => ({ id: uid(), name, log: {} }));
+    state.tasks = [
+      { id: uid(), title: "Ejemplo: leer capítulo para clase", day: d0, prio: 1, mins: 45, done: false },
+      { id: uid(), title: "Ejemplo: responder correos", day: d0, prio: 3, mins: 15, done: false },
+      { id: uid(), title: "Ejemplo: borrador del ensayo", day: d1, prio: 1, mins: 90, done: false },
+      { id: uid(), title: "Ejemplo: hacer las compras", day: d2, prio: 2, mins: 40, done: false },
+    ];
+    commit();
+  }
+});
+
+document.addEventListener("change", e => {
+  if (e.target.id === "import-file" && e.target.files?.[0]) { importBackup(e.target.files[0]); return; }
+  const a = e.target.closest("[data-act]"); if (!a) return;
+  const t = findTask(a); if (!t) return;
+  if (a.dataset.act === "day") { t.day = a.value || null; t.order = null; editing = null; commit(); }
+  if (a.dataset.act === "prio") { t.prio = +a.value; commit(); }
+  if (a.dataset.act === "mins") { t.mins = Math.max(0, Math.round(+a.value || 0)); commit(); }
+});
+
+document.addEventListener("input", e => {
+  if (e.target.id === "ia-input") { try { localStorage.setItem("rumbo-draft", e.target.value); } catch {} }
+});
+
+document.addEventListener("submit", e => {
+  e.preventDefault();
+  const f = e.target, fd = new FormData(f);
+  if (f.dataset.form === "add") {
+    const title = String(fd.get("title")||"").trim(); if (!title) return;
+    state.tasks.push({ id: uid(), title, day: f.dataset.day || null, prio: +fd.get("prio") || 2, mins: 0, done: false });
+    commit(); const inp = document.getElementById(`add-${f.dataset.day||"x"}`); inp && inp.focus();
+  } else if (f.dataset.form === "key") {
+    const k = String(fd.get("key")||"").trim(); if (!k) return;
+    try { localStorage.setItem("rumbo-key", k); } catch {}
+    testKey();
+  } else if (f.dataset.form === "habit") {
+    const name = String(fd.get("name")||"").trim(); if (!name) return;
+    state.habits.push({ id: uid(), name, log: {} }); commit();
+  } else if (f.dataset.form === "block") {
+    const time = String(fd.get("time")||""), label = String(fd.get("label")||"").trim(); if (!time || !label) return;
+    state.routine.push({ id: uid(), time, label }); commit();
+  }
+});
+
+// refresca el bloque "ahora" cada minuto en la vista Hoy
+setInterval(() => { if (tab === "hoy" && !editing && document.activeElement?.tagName !== "INPUT") render(); }, 60000);
+
+/* ---------- Arranque ---------- */
+function init() {
+  const cached = lsGet();
+  if (cached) state = cached;
+  loaded = true;
+  render();
+  try { navigator.storage?.persist?.(); } catch {}
+  if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) render(); });
+}
+init();
+})();
+</script>
+</body>
+</html>
